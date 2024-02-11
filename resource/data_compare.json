@@ -1,0 +1,6 @@
+{
+  "need_sensitivity": 10000,
+  "need_select": [3500],
+  "choice_need": "SELECT",
+  "access_range": 0.05
+}

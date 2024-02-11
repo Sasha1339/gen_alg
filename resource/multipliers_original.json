@@ -1,0 +1,20 @@
+[
+  {
+    "name": "k_v",
+    "value": "0.97",
+    "count_values": 4,
+    "top_border": 0.99,
+    "bottom_border": 0.95,
+    "left_sign": ["/", "/(", ")/"],
+    "right_sign": ["+", "+(", "-", "-("]
+  },
+  {
+    "name": "k_ots_3",
+    "value": "1.15",
+    "count_values": 4,
+    "top_border": 1.25,
+    "bottom_border": 1.1,
+    "left_sign": ["+", "-", "+(", "-(", ")+", ")-"],
+    "right_sign": ["*", "*("]
+  }
+]
