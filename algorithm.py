@@ -17,7 +17,7 @@ class Algorithm:
     _old_blocks: List[List[Block]] = []
     _count_blocks: int = 3
     _count_blocks_start: int = 3
-    _count_individuals: int = 200
+    _count_individuals: int = 100
     _access_range: float
     _parameter_choice: ParameterChoice
     _current_work_individual: List[float] = []
@@ -38,13 +38,13 @@ class Algorithm:
         self._parameter_choice = ParameterChoice[data_lines["choice_need"]]
         self._access_range = data_lines["access_range"]
 
-    def build_individuals(self, number_iteration: int = 1):
+    def build_individuals(self, is_mutation: bool = False, number_iteration: int = 1):
         if number_iteration == 1:
             self.build_first_individuals()
         else:
             self._count_blocks = self._count_blocks_start + number_iteration - 1
             self._old_blocks = self._blocks
-            self.build_new_generation_of_individuals()
+            self.build_new_generation_of_individuals(is_mutation)
 
     def build_first_individuals(self):
         for i in range(self._count_individuals):
@@ -56,13 +56,20 @@ class Algorithm:
                     self._blocks[i].append(random.choice(self._data_signs))
         return self._blocks
 
-    def build_new_generation_of_individuals(self):
+    def build_new_generation_of_individuals(self, is_mutation: bool = False):
         list_signs: List[Block] = []
         list_multiplier: List[Block] = []
         for i in range(len(self._old_blocks)):
             for j in range(len(self._old_blocks[i])):
                 if j % 2 == 0:
-                    list_multiplier.append(self._old_blocks[i][j])
+                    if is_mutation:
+                        if self._parameter_choice == ParameterChoice.SELECT:
+                            self._old_blocks[i][j].get_more_actual_value()
+                        else:
+                            self._old_blocks[i][j].get_small_actual_value()
+                        list_multiplier.append(self._old_blocks[i][j])
+                    else:
+                        list_multiplier.append(self._old_blocks[i][j])
                 else:
                     list_signs.append(self._old_blocks[i][j])
         self._blocks.clear()
@@ -77,8 +84,20 @@ class Algorithm:
                         element: Block = random.choice(list_signs)
                         self._blocks[i].append(element)
 
-
     def first_selection(self):
+        index_empty: List[int] = []
+        for i in range(len(self._blocks)):
+            if len(self._blocks[i]) == 0:
+                index_empty.append(i)
+        index_empty.sort()
+        while len(index_empty) != 0:
+            for index in index_empty:
+                self._blocks.pop(index)
+                while index in index_empty:
+                    index_empty.remove(index)
+                for i in range(len(index_empty)):
+                    index_empty[i] -= 1
+                break
         indexes: List[int] = []
         if self._count_blocks % 2 == 0:
             for index in range(len(self._blocks)):
@@ -141,7 +160,7 @@ class Algorithm:
             try:
                 current_work_protection.append(float(ne.evaluate(expression)))
             except Exception as e:
-                error: str = "error"
+                print(expression)
         for i in range(len(current_work_protection)):
             is_need_select: bool = True
             for cur_select in self._need_select:
@@ -171,7 +190,7 @@ class Algorithm:
             self._current_work_individual.clear()
             count_individuals: int = len(self._blocks)
             if len(self._blocks) > 3:
-                count_individuals = len(self._blocks) // 6
+                count_individuals = len(self._blocks) // 4
             result: List[List[Block]] = []
             for i in range(count_individuals):
                 result.append(self._blocks[i])
@@ -180,24 +199,46 @@ class Algorithm:
         return sign in accessed_sign
 
     def setup(self):
+        first_add_count = True
+        is_mutation: bool = False
         count_empty_individuals: int = 0
         count_blocks_iteration: int = 1
         while count_empty_individuals != 5:
             for i in range(100):
-                self.build_individuals(count_blocks_iteration)
+                self.build_individuals(is_mutation, count_blocks_iteration)
                 self.first_selection()
                 self.main_selection()
                 self.sorted_individuals()
+                is_mutation = False
                 if len(self._blocks) == 0:
                     count_empty_individuals += 1
-                if count_empty_individuals == 3 or i % 3 == 0 and i != 0:
+                # if i == 2:
+                #     count_blocks_iteration += 1
+                if count_empty_individuals == 3 or i % 4 == 0 and i != 0:
                     count_blocks_iteration += 1
+                if len(self._blocks) > 2 and i % 2 == 0 and i != 0:
+                    # print("мутация_1")
+                    is_mutation = True
                 if len(self._blocks) == 2:
                     return self.get_result()
-            return self.get_result()
+            if len(self._blocks) == 0:
+                count_empty_individuals = 0
+                count_blocks_iteration = 1
+                i = 1
+                is_mutation = False
+                self.build_individuals(is_mutation, count_blocks_iteration)
+                self.first_selection()
+                self.main_selection()
+                self.sorted_individuals()
+                # print("мутация_2")
+                # print(len(self._blocks))
+                is_mutation = True
+            elif len(self._blocks) != 0:
+                # while len(self._blocks) > 3:
+                #     self.sorted_individuals()
+                return self.get_result()
         print("Необходимо применение другого вида защиты")
         return []
-
 
     def get_result(self):
         result: List[str] = []
@@ -205,7 +246,7 @@ class Algorithm:
             result_str: str = ""
             for i in range(len(individual)):
                 if individual[i].get_type_block() == TypeBlock.MULTIPLIER:
-                    result_str += individual[i].get_name_multiplier()
+                    result_str += individual[i].get_name_multiplier() + "<"+individual[i].get_actual_value()+">"
                 else:
                     result_str += individual[i].get_sign()
             result.append(result_str)

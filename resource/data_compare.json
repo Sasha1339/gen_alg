@@ -1,6 +1,6 @@
 {
-  "need_sensitivity": 10000,
-  "need_select": [3500],
-  "choice_need": "SELECT",
-  "access_range": 0.05
+  "need_sensitivity": 5000,
+  "need_select": [3200],
+  "choice_need": "SENSITIVITY",
+  "access_range": 0.0001
 }

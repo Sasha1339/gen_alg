@@ -26,3 +26,9 @@ class Block:
 
     def get_name_multiplier(self) -> str:
         pass
+
+    def get_more_actual_value(self) -> str:
+        pass
+
+    def get_small_actual_value(self) -> str:
+        pass
