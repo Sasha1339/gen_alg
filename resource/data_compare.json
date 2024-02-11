@@ -1,6 +1,7 @@
 {
-  "need_sensitivity": 5000,
-  "need_select": [3200],
+  "need_sensitivity": 12000,
+  "need_select": [3400],
   "choice_need": "SENSITIVITY",
-  "access_range": 0.0001
+  "access_range": 0.05,
+  "regulation_mutation": 30.0
 }

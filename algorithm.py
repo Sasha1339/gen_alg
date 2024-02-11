@@ -5,9 +5,12 @@ from type_sign import TypeSign
 from type_block import TypeBlock
 from parameter_choice import ParameterChoice
 import numexpr as ne
+import copy
 
 
 class Algorithm:
+    _regulation_mutation: float
+    _started_blocks: List[List[Block]]
     _data_signs: List[Sign]
     _data_multiplier_original: List[Multiplier]
     _data_multiplier: List[Multiplier]
@@ -17,7 +20,7 @@ class Algorithm:
     _old_blocks: List[List[Block]] = []
     _count_blocks: int = 3
     _count_blocks_start: int = 3
-    _count_individuals: int = 100
+    _count_individuals: int = 200
     _access_range: float
     _parameter_choice: ParameterChoice
     _current_work_individual: List[float] = []
@@ -37,32 +40,37 @@ class Algorithm:
         self._need_select.sort()
         self._parameter_choice = ParameterChoice[data_lines["choice_need"]]
         self._access_range = data_lines["access_range"]
+        self._regulation_mutation = data_lines["regulation_mutation"] / 100.0
 
-    def build_individuals(self, is_mutation: bool = False, number_iteration: int = 1):
-        if number_iteration == 1:
+    def build_individuals(self, is_first: bool = True, is_mutation: bool = False, number_iteration: int = 0):
+        if is_first:
             self.build_first_individuals()
         else:
-            self._count_blocks = self._count_blocks_start + number_iteration - 1
-            self._old_blocks = self._blocks
+            self._count_blocks = self._count_blocks_start + number_iteration
+            self._old_blocks = self._blocks.copy()
             self.build_new_generation_of_individuals(is_mutation)
 
     def build_first_individuals(self):
+        self._blocks.clear()
         for i in range(self._count_individuals):
             self._blocks.append([])
             for j in range(self._count_blocks_start):
                 if j % 2 == 0:
-                    self._blocks[i].append(random.choice(self._data_multiplier + self._data_multiplier_original))
+                    element: Block = random.choice(self._data_multiplier + self._data_multiplier_original)
+                    self._blocks[i].append(copy.deepcopy(element))
                 else:
-                    self._blocks[i].append(random.choice(self._data_signs))
-        return self._blocks
+                    element: Block = random.choice(self._data_signs)
+                    self._blocks[i].append(copy.deepcopy(element))
+        self._started_blocks = self._blocks.copy()
 
     def build_new_generation_of_individuals(self, is_mutation: bool = False):
+
         list_signs: List[Block] = []
         list_multiplier: List[Block] = []
         for i in range(len(self._old_blocks)):
             for j in range(len(self._old_blocks[i])):
                 if j % 2 == 0:
-                    if is_mutation:
+                    if is_mutation and (0 <= random.random() <= self._regulation_mutation):
                         if self._parameter_choice == ParameterChoice.SELECT:
                             self._old_blocks[i][j].get_more_actual_value()
                         else:
@@ -74,15 +82,15 @@ class Algorithm:
                     list_signs.append(self._old_blocks[i][j])
         self._blocks.clear()
         if len(list_multiplier) != 0:
-            for i in range(self._count_individuals):
+            for i in range(len(self._old_blocks) * 3):
                 self._blocks.append([])
                 for j in range(self._count_blocks):
                     if j % 2 == 0:
                         element: Block = random.choice(list_multiplier)
-                        self._blocks[i].append(element)
+                        self._blocks[i].append(copy.deepcopy(element))
                     else:
                         element: Block = random.choice(list_signs)
-                        self._blocks[i].append(element)
+                        self._blocks[i].append(copy.deepcopy(element))
 
     def first_selection(self):
         index_empty: List[int] = []
@@ -189,8 +197,8 @@ class Algorithm:
                     self._blocks[i+1] = individual
             self._current_work_individual.clear()
             count_individuals: int = len(self._blocks)
-            if len(self._blocks) > 3:
-                count_individuals = len(self._blocks) // 4
+            if len(self._blocks) > 5:
+                count_individuals = len(self._blocks) // 2
             result: List[List[Block]] = []
             for i in range(count_individuals):
                 result.append(self._blocks[i])
@@ -199,44 +207,39 @@ class Algorithm:
         return sign in accessed_sign
 
     def setup(self):
-        first_add_count = True
+        is_new_100_iter: bool = False
+        start_iteration: int = 0
         is_mutation: bool = False
+        count_blocks_iteration: int = 0
         count_empty_individuals: int = 0
-        count_blocks_iteration: int = 1
-        while count_empty_individuals != 5:
+        while count_empty_individuals != 9:
             for i in range(100):
-                self.build_individuals(is_mutation, count_blocks_iteration)
+                self.build_individuals(True if i == 0 else False, is_mutation=is_mutation, number_iteration=count_blocks_iteration)
                 self.first_selection()
                 self.main_selection()
                 self.sorted_individuals()
                 is_mutation = False
+                if len(self._blocks) != 0 and len(self._blocks) <= 2:
+                    return self.get_result()
+                if len(self._blocks) == 0 and count_empty_individuals % 3 == 0 and count_empty_individuals != 0:
+                    count_blocks_iteration += 1
+                    break
                 if len(self._blocks) == 0:
                     count_empty_individuals += 1
-                # if i == 2:
-                #     count_blocks_iteration += 1
-                if count_empty_individuals == 3 or i % 4 == 0 and i != 0:
-                    count_blocks_iteration += 1
-                if len(self._blocks) > 2 and i % 2 == 0 and i != 0:
-                    # print("мутация_1")
+                    break
+                if len(self._blocks) != 0 and len(self._blocks) <= 15:
                     is_mutation = True
-                if len(self._blocks) == 2:
-                    return self.get_result()
+                    continue
+                # if len(self._blocks) > 5:
+                #     continue
             if len(self._blocks) == 0:
-                count_empty_individuals = 0
-                count_blocks_iteration = 1
-                i = 1
-                is_mutation = False
-                self.build_individuals(is_mutation, count_blocks_iteration)
-                self.first_selection()
-                self.main_selection()
-                self.sorted_individuals()
-                # print("мутация_2")
-                # print(len(self._blocks))
+                self._blocks.clear()
+                self._blocks = self._started_blocks.copy()
                 is_mutation = True
-            elif len(self._blocks) != 0:
-                # while len(self._blocks) > 3:
-                #     self.sorted_individuals()
-                return self.get_result()
+                continue
+            while len(self._blocks) > 3:
+                self.sorted_individuals()
+            return self.get_result()
         print("Необходимо применение другого вида защиты")
         return []
 
